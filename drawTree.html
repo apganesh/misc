@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="utf-8">
+
+   <title>Collapsible Tree Example</title>
+
+   <style>
+
+      .node circle {
+         fill: #fff;
+         stroke: steelblue;
+         stroke-width: 3px;
+      }
+
+      .node text { font: 12px sans-serif; }
+
+      .link {
+         fill: none;
+         stroke: #ccc;
+         stroke-width: 2px;
+      }
+
+   </style>
+
+</head>
+
+<body>
+         <script src="http://d3js.org/d3.v3.min.js"></script>
+
+   <div id="control_row">
+      Tree data:
+      <input id="treeDataText" type=text size=100>
+      <input id="drawTreeButton" type=button value="drawTree">
+   </div>
+
+   <!-- load the d3.js library -->
+
+
+   <script>
+
+
+   var data = [];
+   // create the tree array
+   var treeData = [];
+   var nodecnt = 0;
+
+   // *********** Convert flat data into a nice tree ***************
+   // create a name: node map
+
+   function traverseInorder(root, parentval) {
+      if (root) {
+         var pval = root.val+"_"+nodecnt;
+         nodecnt++;
+         traverseInorder(root.left, pval)
+         //console.log(root.val)
+         data.push({"name":pval, "parent":parentval})
+
+         traverseInorder(root.right, pval)
+      }
+   }
+
+   function createTreeData(root) {
+      traverseInorder(root, null);
+
+      var dataMap = data.reduce(function(map, node) {
+         map[node.name] = node;
+         return map;
+      }, {});
+
+
+      data.forEach(function(node) {
+         // add to parent
+         var parent = dataMap[node.parent];
+         if (parent) {
+            // create child array if it doesn't exist
+            (parent.children || (parent.children = []))
+            // add node to child array
+            .push(node);
+         } else {
+            // parent is null or missing
+            treeData.push(node);
+         }
+      });
+   }
+
+
+
+   // ************** Generate the tree diagram	 *****************
+   var margin = {top: 50, right: 20, bottom: 20, left: 20},
+   width = 2000 - margin.right - margin.left,
+   height = 1000 - margin.top - margin.bottom;
+
+   var i = 0;
+
+   var tree = d3.layout.tree()
+   .size([height, width]);
+
+   var diagonal = d3.svg.diagonal()
+   .projection(function(d) { return [d.x, d.y]; });
+
+   var svg = d3.select("body").append("svg")
+   .attr("width", width + margin.right + margin.left)
+   .attr("height", height + margin.top + margin.bottom)
+   .append("g")
+   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+   //root = treeData[0];
+
+   //update(root);
+
+   function update(root) {
+// Compute the new tree layout.
+  var nodes = tree.nodes(root).reverse(),
+     links = tree.links(nodes);
+
+  // Normalize for fixed-depth.
+  nodes.forEach(function(d) { d.y = d.depth * 75; });
+
+  // Declare the nodes…
+  var node = svg.selectAll("g.node")
+     .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+  // Enter the nodes.
+  var nodeEnter = node.enter().append("g")
+     .attr("class", "node")
+     .attr("transform", function(d) { 
+        return "translate(" + d.x + "," + d.y + ")"; });
+
+  nodeEnter.append("circle")
+     .attr("r", 10)
+     .style("fill", "#fff");
+
+  nodeEnter.append("text")
+     .attr("y", function(d) { 
+        return d.children || d._children ? -15 : 15; })
+     .attr("dy", ".35em")
+     .attr("text-anchor", "middle")
+     .text(function(d) { return d.name.split("_")[0]; })
+     .style("fill-opacity", 1);
+
+  // Declare the links…
+  var link = svg.selectAll("path.link")
+     .data(links, function(d) { return d.target.id; });
+
+  // Enter the links.
+  link.enter().insert("path", "g")
+     .attr("class", "link")
+     .attr("d", diagonal);
+      
+      }
+
+            // Toggle children on click.
+            function click(d) {
+               if (d.children) {
+                  d._children = d.children;
+                  d.children = null;
+               } else {
+                  d.children = d._children;
+                  d._children = null;
+               }
+               update(d);
+            }
+
+            var drawbutton = document.getElementById("drawTreeButton");
+            drawbutton.addEventListener("click",function(e){
+                var tdata = document.getElementById("treeDataText").value
+               var root = createTree(tdata);
+               console.log("Creating the Tree data for d3")
+               data = [];
+               treeData = [];
+
+               createTreeData(root);
+               troot = treeData[0];
+
+               update(troot);
+            },false);
+
+         </script>
+
+         <script type="text/javascript" src="tree.js"></script>
+      </body>
+      </html>
